@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from app.models.request_models import AnalyzeChangeRequest
-from app.routes.analyze import clamp_risk_score
+from app.routes.analyze import clamp_risk_score, infer_change_type
 from app.services.analyzer import AnalysisContextError, AnalyzerService
 from app.services.openmetadata_mcp import OpenMetadataMcpError
 
@@ -81,4 +81,10 @@ def test_clamp_risk_score_bounds() -> None:
     assert clamp_risk_score(66) == 66
     assert clamp_risk_score(100) == 100
     assert clamp_risk_score(101) == 100
+
+
+def test_infer_change_type_only_matches_explicit_mutation_intent() -> None:
+    """Verify intent inference does not default question intents to destructive operations."""
+    assert infer_change_type("What is the primary column in the selected table?") is None
+    assert infer_change_type("Please delete column email from dim_customer") == "DELETE_COLUMN"
 

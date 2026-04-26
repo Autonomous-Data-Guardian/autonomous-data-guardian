@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.dependencies import get_analyzer_service, get_llm_planner_service, get_report_store_service
-from app.models.request_models import AnalyzeChangeRequest
+from app.models.request_models import AnalyzeChangeRequest, ChangeType
 from app.models.response_models import AnalyzeChangeResponse
 from app.services.analyzer import AnalysisContextError, AnalyzerService
 from app.services.llm_planner import LlmPlannerError, LlmPlannerRateLimitError, LlmPlannerService
@@ -13,15 +13,23 @@ from app.services.risk_engine import map_risk_level
 router = APIRouter(tags=["analysis"])
 
 # This function infers one MVP change type from user intent text.
-def infer_change_type(intent: str) -> str:
+def infer_change_type(intent: str) -> ChangeType | None:
     text = intent.lower()
     if "rename" in text:
         return "RENAME_COLUMN"
-    if "type" in text or "cast" in text or "datatype" in text:
+    if "change type" in text or "cast" in text or "datatype" in text:
         return "CHANGE_COLUMN_TYPE"
     if "drop table" in text or "delete table" in text or "remove table" in text:
         return "DELETE_TABLE"
-    return "DELETE_COLUMN"
+    if (
+        "delete column" in text
+        or "drop column" in text
+        or "remove column" in text
+        or "drop field" in text
+        or "remove field" in text
+    ):
+        return "DELETE_COLUMN"
+    return None
 
 
 def clamp_risk_score(score: int) -> int:
@@ -38,7 +46,9 @@ async def analyze_change(
 ) -> AnalyzeChangeResponse:
     """Analyze proposed change and return persisted report response."""
     if request.changeType is None:
-        request.changeType = infer_change_type(request.intent)
+        inferred_change_type = infer_change_type(request.intent)
+        if inferred_change_type is not None:
+            request.changeType = inferred_change_type
 
     try:
         analysis = await analyzer_service.analyze(request)
