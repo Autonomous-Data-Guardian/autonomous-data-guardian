@@ -1,0 +1,28 @@
+[project]
+name = "guardian-backend"
+version = "0.1.0"
+description = "Autonomous Data Guardian FastAPI backend"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.136.1",
+  "httpx>=0.28.1",
+  "pydantic-settings>=2.11.0",
+  "python-multipart>=0.0.20",
+  "uvicorn>=0.38.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.2",
+]
+
+[build-system]
+requires = ["setuptools>=80.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
